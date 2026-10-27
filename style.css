@@ -287,3 +287,50 @@ tr.is-pinned td:first-child { box-shadow: inset 3px 0 0 var(--ring); }
 
 .active-cell { fill: none; stroke: var(--text-primary); stroke-width: 1.5; stroke-dasharray: 4 3; pointer-events: none; }
 .tt-extra { margin-top: 8px; font-size: 12px; font-weight: 600; }
+
+/* ------------------------------------------ Viz 3 + Viz 4 layout */
+.layout {
+  grid-template-areas: "splom side" "focus side" "compare side" "fields fields" "table table";
+}
+.compare-card { grid-area: compare; }
+.fields-card { grid-area: fields; }
+@media (max-width: 1100px) {
+  .layout { grid-template-areas: "splom" "side" "focus" "compare" "fields" "table"; }
+}
+
+/* ------------------------------------------------ Viz 3: comparison */
+.compare-svg { display: block; overflow: visible; }
+.c-label { font-size: 13px; font-weight: 600; fill: var(--text-primary); }
+.c-sublabel { font-size: 11.5px; fill: var(--text-muted); }
+.c-band { fill: var(--hist); }
+.c-base { stroke: var(--border); }
+.c-median { stroke: var(--text-secondary); stroke-width: 2; }
+.c-dot { cursor: default; transition: opacity 120ms; }
+.c-dot circle { fill: var(--text-primary); stroke: var(--surface-1); stroke-width: 2; }
+.c-dot text { fill: var(--surface-1); font-size: 11px; font-weight: 700; pointer-events: none; }
+.c-dot.faded { opacity: 0.25; }
+.compare-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 4px 0 12px; font-size: 12px; color: var(--text-secondary); }
+.c-key { display: inline-flex; align-items: center; gap: 6px; }
+.c-key-band { width: 22px; height: 10px; border-radius: 2px; background: var(--hist); }
+.c-key-median { width: 2px; height: 14px; background: var(--text-secondary); }
+.c-key-dot {
+  width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--text-primary); color: var(--surface-1); font-size: 10px; font-weight: 700;
+}
+.compare-table { max-height: none; }
+.compare-table tbody tr { cursor: default; }
+.peer-row td { color: var(--text-secondary); font-style: italic; border-top: 1px solid var(--border); }
+.pin-badge.sm { width: 20px; height: 20px; font-size: 10.5px; }
+
+/* --------------------------------------------- Viz 4: field of study */
+.field-select { max-width: 420px; }
+.fs-overlay { fill: transparent; pointer-events: all; }
+.fs-median-line { stroke: var(--text-muted); stroke-dasharray: 5 4; stroke-width: 1.2; }
+.fs-median-label { font-size: 11.5px; fill: var(--text-muted); paint-order: stroke; stroke: var(--surface-1); stroke-width: 3px; }
+.fs-links { pointer-events: none; }
+.fs-link line { stroke: var(--text-secondary); stroke-width: 1.5; }
+.fs-arrowhead { fill: var(--text-secondary); }
+.fs-inst { fill: var(--surface-1); stroke: var(--text-primary); stroke-width: 1.8; }
+.fs-inst-label { font-size: 11.5px; font-weight: 600; fill: var(--text-secondary); paint-order: stroke; stroke: var(--surface-1); stroke-width: 3px; }
+.f-dot.fs-selected { stroke: var(--text-primary); stroke-width: 1.5; }
+.fs-major-label { font-size: 11.5px; fill: var(--text-secondary); paint-order: stroke; stroke: var(--surface-1); stroke-width: 3px; }

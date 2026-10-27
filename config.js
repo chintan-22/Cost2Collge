@@ -3,7 +3,8 @@
 
 export const DATA_FILES = {
   institutions: "institutions_visualizable.csv",
-  programs: "programs_bachelors_visualizable.csv", // used later by Viz 4
+  institutionsAll: "institutions_clean.csv", // metadata lookup for Viz 4
+  programs: "programs_bachelors_visualizable.csv", // Viz 4
 };
 
 export const MAX_PINNED = 4;
