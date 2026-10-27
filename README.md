@@ -25,17 +25,18 @@ The cleaned CSV files are already in the repository, so you can run the app stra
 3. Start the local server:
 
    ```bash
-   python serve.py
+   python serve.py 8123
    ```
 
-   If that doesn't work, use `python3 serve.py` (Mac/Linux) or `py serve.py` (Windows).
+   If that doesn't work, use `python3 serve.py 8123` (Mac/Linux) or `py serve.py 8123` (Windows).
+   The number at the end is the port. Port 8123 is used here because the common default, 8000, is often already taken by another local server or holds old cached files.
    You should see:
 
    ```text
-   Serving on http://localhost:8000  (Ctrl+C to stop)
+   Serving on http://localhost:8123  (Ctrl+C to stop)
    ```
 
-4. Open **http://localhost:8000** in your browser. Keep the terminal open while you use the app.
+4. Open **http://localhost:8123** in your browser. Keep the terminal open while you use the app.
 
 5. To stop the server, press **Ctrl + C** in the terminal.
 
@@ -47,8 +48,8 @@ Browsers block web pages opened directly from disk (`file://...`) from loading t
 
 | Problem | Fix |
 | --- | --- |
-| Page looks outdated or broken after pulling new code | The browser is using old cached files. Press **Ctrl + Shift + R** (Mac: **Cmd + Shift + R**). If that doesn't help, start the server on a new port, e.g. `python serve.py 8123`, and open `http://localhost:8123`. |
-| `Address already in use` | Another server is still running. Close the old terminal, or use a different port: `python serve.py 8123`. |
+| Page looks outdated or broken after pulling new code | The browser is using old cached files. Press **Ctrl + Shift + R** (Mac: **Cmd + Shift + R**). If that doesn't help, start the server on another port, e.g. `python serve.py 8124`, and open `http://localhost:8124`. |
+| `Address already in use` | Another server is still running. Close the old terminal, or use a different port: `python serve.py 8124`. |
 | "Could not load institutions_visualizable.csv" | The page was opened directly from disk, or the server was started in the wrong folder. Start `serve.py` from the folder that contains `index.html`. |
 | `python` is not recognized | Try `python3` or `py`, or install Python 3 from python.org. |
 | Charts are empty and the console mentions `d3` | The D3 library loads from a CDN, so an internet connection is required. |
@@ -481,7 +482,7 @@ python3 clean_college_scorecard.py
 ```
 
 5. Confirm the four cleaned CSV files are generated.
-6. Start the app with `python serve.py` (see [Run the prototype](#run-the-prototype)).
+6. Start the app with `python serve.py 8123` (see [Run the prototype](#run-the-prototype)).
 
 ## Data pipeline summary
 
