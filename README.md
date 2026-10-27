@@ -1,8 +1,102 @@
-# Cost2College — Data Cleaning & Visualization Data Guide
+# Cost2College — College Cost, Debt & Outcomes
 
-This repository contains the data-cleaning pipeline for the **College Cost, Debt & Outcomes** visualization project.
+This repository contains the **College Cost, Debt & Outcomes** visualization prototype:
 
-The preprocessing step converts the large raw U.S. Department of Education College Scorecard files into smaller, visualization-ready CSV files for the D3.js dashboard.
+- a data-cleaning pipeline that converts the large raw U.S. Department of Education College Scorecard files into smaller, visualization-ready CSV files, and
+- a D3.js web app with four linked visualizations built on those files.
+
+## Run the prototype
+
+The cleaned CSV files are already in the repository, so you can run the app straight away. You only need **Python 3** (to start a local web server) and a modern browser (Chrome, Edge, Firefox or Safari). Nothing needs to be installed.
+
+### Steps
+
+1. Clone the repository (skip if you already have it):
+
+   ```bash
+   git clone https://github.com/chintan-22/Cost2Collge.git
+   ```
+
+2. Open a terminal **inside the `Cost2Collge` folder** (the folder that contains `index.html`).
+   - Windows: open the folder in File Explorer, click the address bar, type `cmd` and press Enter.
+   - Mac: right-click the folder in Finder → **New Terminal at Folder**.
+   - VS Code: open the folder, then **Terminal → New Terminal**.
+
+3. Start the local server:
+
+   ```bash
+   python serve.py
+   ```
+
+   If that doesn't work, use `python3 serve.py` (Mac/Linux) or `py serve.py` (Windows).
+   You should see:
+
+   ```text
+   Serving on http://localhost:8000  (Ctrl+C to stop)
+   ```
+
+4. Open **http://localhost:8000** in your browser. Keep the terminal open while you use the app.
+
+5. To stop the server, press **Ctrl + C** in the terminal.
+
+### Why a local server?
+
+Browsers block web pages opened directly from disk (`file://...`) from loading the CSV files, so double-clicking `index.html` shows an error. `serve.py` is a small local server that also tells the browser **not to cache** files, so code changes always show up after a reload.
+
+### Troubleshooting
+
+| Problem | Fix |
+| --- | --- |
+| Page looks outdated or broken after pulling new code | The browser is using old cached files. Press **Ctrl + Shift + R** (Mac: **Cmd + Shift + R**). If that doesn't help, start the server on a new port, e.g. `python serve.py 8123`, and open `http://localhost:8123`. |
+| `Address already in use` | Another server is still running. Close the old terminal, or use a different port: `python serve.py 8123`. |
+| "Could not load institutions_visualizable.csv" | The page was opened directly from disk, or the server was started in the wrong folder. Start `serve.py` from the folder that contains `index.html`. |
+| `python` is not recognized | Try `python3` or `py`, or install Python 3 from python.org. |
+| Charts are empty and the console mentions `d3` | The D3 library loads from a CDN, so an internet connection is required. |
+
+## Using the app
+
+All views share the same filters and selections, so an action in one view updates the others.
+
+| View | What it shows | Interactions |
+| --- | --- | --- |
+| **1. Scatterplot matrix** | 4×4 matrix of net price, median debt, completion rate and 5-year earnings; one dot per college, colored by sector; histograms on the diagonal | Hover for details · drag to brush · click a dot to pin · double-click a cell to open it in view 2 |
+| **2. Focused trade-off** | One large scatterplot for a chosen metric pair (presets: Net price × Earnings, Debt × Earnings, Net price × Completion) | Presets or X/Y dropdowns · drag to brush · click to pin · optional trade-off (Pareto) frontier |
+| **3. Pinned college comparison** | Up to 4 pinned colleges on one aligned scale per metric, with the middle 50% and median of colleges matching the filters as a peer reference; exact values in a table | Hover a dot for details and its percentile |
+| **4. Field of study** | Program median debt vs. program median earnings for one major across colleges, or for every major at one pinned college | Choose a major or college · click to pin · arrows show how a pinned college's program compares with its institution-wide position |
+
+Shared controls at the top: **sector** buttons (also the color legend), **state** dropdown and **Reset**. The **Pinned colleges** panel lists pinned colleges (click × to unpin), and the **Brushed colleges** table lists colleges inside the current brush (click a row to pin).
+
+Suggested demo workflow: filter → inspect a relationship in the matrix → brush and pin 2–4 colleges → compare them in view 3 → choose a major in view 4.
+
+## Project structure
+
+```text
+Cost2Collge/
+├── index.html                          # page layout
+├── style.css                           # styling (light and dark mode)
+├── main.js                             # loads data, builds controls, connects the views
+├── config.js                           # metrics, sector colors, shared axis scales
+├── state.js                            # shared state: filters, brush, pinned colleges, metric pair, field
+├── splom.js                            # Visualization 1 — scatterplot matrix
+├── focused.js                          # Visualization 2 — focused trade-off scatterplot
+├── compare.js                          # Visualization 3 — aligned pinned-college comparison
+├── fields.js                           # Visualization 4 — field-of-study scatterplot
+├── serve.py                            # local no-cache web server
+├── clean_college_scorecard.py          # data-cleaning script
+├── institutions_clean.csv              # all cleaned institutions (used by view 4 for college details)
+├── institutions_visualizable.csv       # institutions with all four core metrics (views 1–3)
+├── programs_bachelors_clean.csv
+├── programs_bachelors_visualizable.csv # bachelor's programs with debt and earnings (view 4)
+└── README.md
+```
+
+Views never call each other directly. Each one updates the shared state in `state.js` and redraws when that state changes.
+
+---
+
+# Data cleaning guide
+
+The sections below describe how the CSV files were produced. You only need them to regenerate the data.
 
 ## Raw data required
 
@@ -361,9 +455,19 @@ institutions_visualizable.csv
 programs_bachelors_clean.csv
 programs_bachelors_visualizable.csv
 README.md
+index.html
+style.css
+main.js
+config.js
+state.js
+splom.js
+focused.js
+compare.js
+fields.js
+serve.py
 ```
 
-If any generated CSV becomes too large, keep the smaller visualization-ready outputs in the repository and regenerate the larger cleaned files locally.
+If any generated CSV becomes too large, keep the smaller visualization-ready outputs in the repository and regenerate the larger cleaned files locally. Keep `institutions_clean.csv`, though: the field-of-study view uses it to look up college details.
 
 ## How a teammate reproduces the data
 
@@ -377,7 +481,7 @@ python3 clean_college_scorecard.py
 ```
 
 5. Confirm the four cleaned CSV files are generated.
-6. Use the visualization-ready files for D3 development.
+6. Start the app with `python serve.py` (see [Run the prototype](#run-the-prototype)).
 
 ## Data pipeline summary
 
