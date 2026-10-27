@@ -1,6 +1,6 @@
 // main.js — loads the data, builds controls and wires the views together.
 
-import { DATA_FILES, METRICS, METRIC_BY_KEY, SECTORS, MAX_PINNED, PAIR_PRESETS, buildScales } from "./config.js";
+import { DATA_FILES, METRICS, METRIC_BY_KEY, SECTORS, SIZE_BUCKETS, MAX_PINNED, PAIR_PRESETS, buildScales } from "./config.js";
 import { state, on, isVisible, setFilters, setHovered, togglePin, clearPins, setActivePair } from "./state.js";
 import { createSplom } from "./splom.js";
 import { createFocused } from "./focused.js";
@@ -43,6 +43,7 @@ function parseProgram(instLookup) {
       city: inst?.city || "",
       state: inst?.state || d.state,
       sector: inst?.sector || d.sector,
+      enrollment: inst?.enrollment ?? null, // lets the size filter apply to programs
     };
   };
 }
@@ -75,34 +76,57 @@ function createTooltip(el) {
 }
 
 // --------------------------------------------------------------- controls
+// Header dropdowns: State, Sector, Institution size (+ Field of study, owned by Viz 4)
 function buildControls(data, views) {
-  const counts = d3.rollup(data, (v) => v.length, (d) => d.sector);
-
-  const chips = d3.select("#sector-filter").selectAll("button").data(SECTORS).join("button")
-    .attr("type", "button")
-    .attr("class", "chip")
-    .attr("aria-pressed", "true")
-    .html((s) => `<span class="swatch" style="background:var(${s.cssVar})"></span>${s.label}<span class="chip-count">${counts.get(s.key) || 0}</span>`)
-    .on("click", (event, s) => {
-      const sectors = new Set(state.filters.sectors);
-      sectors.has(s.key) ? sectors.delete(s.key) : sectors.add(s.key);
-      if (sectors.size === 0) return; // keep at least one sector on
-      setFilters({ sectors });
-    });
+  const allSectors = () => new Set(SECTORS.map((s) => s.key));
 
   const states = Array.from(new Set(data.map((d) => d.state))).sort();
   d3.select("#state-filter").selectAll("option").data(["All", ...states]).join("option")
     .attr("value", (s) => s).text((s) => (s === "All" ? "All states" : s));
-  d3.select("#state-filter").on("change", (event) => setFilters({ state: event.target.value }));
+  d3.select("#state-filter").on("change", (e) => setFilters({ state: e.target.value }));
+
+  d3.select("#sector-filter").selectAll("option")
+    .data([{ key: "All", label: "All sectors" }, ...SECTORS]).join("option")
+    .attr("value", (s) => s.key).text((s) => s.label);
+  d3.select("#sector-filter").on("change", (e) => {
+    const v = e.target.value;
+    setFilters({ sectors: v === "All" ? allSectors() : new Set([v]) });
+  });
+
+  d3.select("#size-filter").selectAll("option")
+    .data([{ key: "All", label: "All sizes" }, ...SIZE_BUCKETS]).join("option")
+    .attr("value", (b) => b.key).text((b) => b.label);
+  d3.select("#size-filter").on("change", (e) => setFilters({ size: e.target.value }));
 
   d3.select("#reset").on("click", () => {
     views.forEach((v) => v.clearBrush());
     clearPins();
-    d3.select("#state-filter").property("value", "All");
-    setFilters({ sectors: new Set(SECTORS.map((s) => s.key)), state: "All" });
+    d3.selectAll("#state-filter, #sector-filter, #size-filter").property("value", "All");
+    setFilters({ sectors: allSectors(), state: "All", size: "All" });
   });
+}
 
-  on("filters", () => chips.attr("aria-pressed", (s) => state.filters.sectors.has(s.key)));
+/** Panel 1 legend: sector colors (with counts for the current filters) + how to interact. */
+function updateSplomLegend(data) {
+  const visible = data.filter(isVisible);
+  const counts = d3.rollup(visible, (v) => v.length, (d) => d.sector);
+  d3.select("#splom-legend").html(`
+    <div class="legend-title">Sector</div>
+    <ul class="legend-list">
+      ${SECTORS.map((s) => `
+        <li class="${state.filters.sectors.has(s.key) ? "" : "off"}">
+          <span class="swatch" style="background:var(${s.cssVar})"></span>${s.label}
+          <span class="legend-count">${(counts.get(s.key) || 0).toLocaleString()}</span>
+        </li>`).join("")}
+      <li><span class="swatch swatch-dim"></span>Outside brush</li>
+      <li><span class="swatch swatch-ring"></span>Pinned college</li>
+    </ul>
+    <div class="legend-help">
+      <p>Diagonal: histograms</p>
+      <p>Drag in any cell → highlights everywhere</p>
+      <p>Click a dot → pin</p>
+      <p>Double-click a cell → view 2</p>
+    </div>`);
 }
 
 // ------------------------------------------- Viz 2 controls (metric pair)
@@ -164,6 +188,7 @@ function updateStatus(data) {
     (br ? ` · <strong>${brushedCount.toLocaleString()}</strong> brushed` : ""));
 }
 
+/** Pinned bar under the header: one chip per pinned college (× unpins). */
 function updatePinnedPanel(byId) {
   const rows = state.pinned.map((id) => byId.get(id)).filter(Boolean);
   d3.select("#pinned-count").text(`${rows.length}/${MAX_PINNED}`);
@@ -171,14 +196,12 @@ function updatePinnedPanel(byId) {
   const sectorVar = Object.fromEntries(SECTORS.map((s) => [s.key, s.cssVar]));
 
   d3.select("#pinned-list").selectAll("li").data(rows, (d) => d.UNITID).join("li")
-    .attr("class", "pinned-item")
+    .attr("class", "pin-chip")
+    .attr("title", (d) => `${d.name} — ${d.city}, ${d.state}`)
     .html((d, i) => `
-      <span class="pin-badge">${i + 1}</span>
-      <div class="pin-text">
-        <div class="pin-name">${d.name}</div>
-        <div class="pin-meta"><span class="swatch" style="background:var(${sectorVar[d.sector]})"></span>${d.city}, ${d.state}</div>
-        <div class="pin-metrics">${METRICS.map((m) => `<span>${m.label}: <b>${m.fmt(d[m.key])}</b></span>`).join("")}</div>
-      </div>
+      <span class="pin-badge sm">${i + 1}</span>
+      <span class="swatch" style="background:var(${sectorVar[d.sector]})"></span>
+      <span class="pin-name">${d.name}</span>
       <button type="button" class="unpin" aria-label="Unpin ${d.name}">×</button>`)
     .on("mouseenter", (e, d) => setHovered(d.UNITID))
     .on("mouseleave", () => setHovered(null))
@@ -257,7 +280,7 @@ async function initFields(data, tooltip, total, clipped) {
   createFields(document.getElementById("fields"), programs, scales, {
     mode: "#field-mode",
     fieldSelect: "#field-select",
-    fieldWrap: "#field-select-wrap",
+    fieldWrap: null, // the field dropdown lives in the header and is always shown
     collegeSelect: "#college-select",
     collegeWrap: "#college-select-wrap",
     instToggle: "#inst-toggle",
@@ -303,7 +326,7 @@ async function init() {
   buildPairControls(focused);
   writeFootnote(clipped, data.length);
 
-  const refresh = () => { updateStatus(data); updateBrushTable(data); };
+  const refresh = () => { updateStatus(data); updateBrushTable(data); updateSplomLegend(data); };
   on("filters", refresh);
   on("brushed", refresh);
   on("pinned", () => { updatePinnedPanel(byId); updateBrushTable(data); });

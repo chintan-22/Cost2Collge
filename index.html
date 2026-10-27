@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,100 +8,124 @@
   <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
 </head>
 <body>
-  <header class="page-header">
-    <h1>College Cost, Debt &amp; Outcomes</h1>
-    <p class="subtitle">How net price, graduate debt, completion and earnings relate across U.S. four-year colleges.</p>
+  <!-- Header bar: title + shared filters -->
+  <header class="app-header">
+    <div class="brand">
+      <svg class="brand-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3" y="12" width="4" height="9" rx="1"></rect>
+        <rect x="10" y="7" width="4" height="14" rx="1"></rect>
+        <rect x="17" y="3" width="4" height="18" rx="1"></rect>
+      </svg>
+      <div>
+        <h1>College Cost, Debt &amp; Outcomes</h1>
+        <p class="brand-sub">Coordinated views of U.S. four-year colleges · College Scorecard</p>
+      </div>
+    </div>
+
+    <div class="header-filters" aria-label="Filters">
+      <label class="hf"><span class="hf-label">State</span><select id="state-filter"></select></label>
+      <label class="hf"><span class="hf-label">Sector</span><select id="sector-filter"></select></label>
+      <label class="hf"><span class="hf-label">Institution size</span><select id="size-filter"></select></label>
+      <label class="hf hf-wide"><span class="hf-label">Field of study (view 4)</span><select id="field-select"></select></label>
+      <button id="reset" type="button" class="hf-btn">Reset</button>
+    </div>
   </header>
 
-  <!-- Shared filters (apply to every view) -->
-  <section class="controls" aria-label="Filters">
-    <div class="control-group">
-      <span class="control-label">Sector</span>
-      <div id="sector-filter" class="chips"></div>
-    </div>
-    <div class="control-group">
-      <label class="control-label" for="state-filter">State</label>
-      <select id="state-filter"></select>
-    </div>
-    <button id="reset" type="button" class="btn">Reset</button>
+  <!-- Status + pinned colleges -->
+  <div class="subbar">
     <div id="status" class="status" aria-live="polite"></div>
-  </section>
+    <div class="pinned-bar">
+      <span class="pb-label">Pinned <span id="pinned-count" class="count"></span></span>
+      <ol id="pinned-list" class="pinned-list"></ol>
+      <span id="pinned-empty" class="empty">Click any dot or table row to pin up to 4 colleges.</span>
+    </div>
+  </div>
 
-  <main class="layout">
-    <!-- Visualization 1: Scatterplot Matrix -->
-    <section class="card viz-card">
-      <div class="card-head">
-        <h2>Scatterplot matrix</h2>
-        <p class="hint">Hover for details · drag to brush · click a dot to pin · double-click a cell to focus it</p>
+  <!-- Four coordinated views, 2 × 2 -->
+  <main class="grid4">
+    <!-- 1. Scatterplot Matrix -->
+    <section class="panel viz-card">
+      <div class="panel-head">
+        <span class="panel-badge">1</span>
+        <div>
+          <h2>Scatterplot Matrix</h2>
+          <p class="panel-sub">Net price · debt · completion · earnings (4 × 4) · DR1</p>
+        </div>
       </div>
-      <div id="splom"></div>
+      <div class="p1-body">
+        <div id="splom"></div>
+        <aside id="splom-legend" class="splom-legend"></aside>
+      </div>
     </section>
 
-    <!-- Visualization 2: Focused trade-off scatterplot -->
-    <section class="card focus-card">
-      <div class="card-head">
-        <h2>Focused trade-off</h2>
-        <p class="hint">Pick a metric pair (or double-click a matrix cell) · drag to brush · click to pin</p>
+    <!-- 2. Focused Scatterplot + Pareto Frontier -->
+    <section class="panel focus-card">
+      <div class="panel-head">
+        <span class="panel-badge">2</span>
+        <div>
+          <h2>Focused Scatterplot + Pareto Frontier</h2>
+          <p class="panel-sub">One metric pair · non-dominated colleges on the step line · DR2</p>
+        </div>
       </div>
       <div class="focus-controls">
         <div id="pair-presets" class="segmented" role="group" aria-label="Metric pair presets"></div>
         <label class="control-group"><span class="control-label">X</span><select id="x-select"></select></label>
         <label class="control-group"><span class="control-label">Y</span><select id="y-select"></select></label>
-        <label class="toggle"><input type="checkbox" id="pareto-toggle"> Show trade-off frontier</label>
+        <label class="toggle"><input type="checkbox" id="pareto-toggle"> Pareto frontier</label>
       </div>
       <div id="focused"></div>
       <p id="frontier-note" class="hint frontier-note"></p>
     </section>
 
-    <!-- Visualization 3: Aligned college comparison -->
-    <section class="card compare-card">
-      <div class="card-head">
-        <h2>Pinned college comparison</h2>
-        <p class="hint">Each row is one metric on its own scale · hover a dot for details</p>
+    <!-- 3. Aligned Dot Plot + Distribution Context -->
+    <section class="panel compare-card">
+      <div class="panel-head">
+        <span class="panel-badge">3</span>
+        <div>
+          <h2>Aligned Dot Plot + Distribution Context</h2>
+          <p class="panel-sub">One row per metric · pinned colleges vs. filtered colleges · DR3</p>
+        </div>
       </div>
       <div id="compare"></div>
     </section>
 
-    <!-- Visualization 4: Field-of-study scatterplot -->
-    <section class="card fields-card">
-      <div class="card-head">
-        <h2>Field of study</h2>
-        <p class="hint">Program debt vs. program earnings · hover for details · click to pin</p>
+    <!-- 4. Field-of-Study Scatterplot -->
+    <section class="panel fields-card">
+      <div class="panel-head">
+        <span class="panel-badge">4</span>
+        <div>
+          <h2>Field-of-Study Scatterplot</h2>
+          <p class="panel-sub">Program debt × program earnings · same grammar, two modes · DR4</p>
+        </div>
       </div>
       <div class="focus-controls">
         <div id="field-mode" class="segmented" role="group" aria-label="Field view mode"></div>
-        <label id="field-select-wrap" class="control-group"><span class="control-label">Major</span><select id="field-select" class="field-select"></select></label>
         <label id="college-select-wrap" class="control-group"><span class="control-label">College</span><select id="college-select"></select></label>
-        <label class="toggle"><input type="checkbox" id="inst-toggle" checked> Show institution-wide position</label>
+        <label class="toggle"><input type="checkbox" id="inst-toggle" checked> Institution-wide position</label>
       </div>
       <div id="fields"></div>
       <p id="fields-note" class="hint frontier-note"></p>
     </section>
-
-    <aside class="card side-card">
-      <div class="card-head">
-        <h2>Pinned colleges <span id="pinned-count" class="count"></span></h2>
-      </div>
-      <p id="pinned-empty" class="empty">Click a dot (or a table row) to pin up to 4 colleges. Pinned colleges are ringed and numbered in every cell.</p>
-      <ol id="pinned-list" class="pinned-list"></ol>
-    </aside>
-
-    <section class="card table-card">
-      <div class="card-head">
-        <h2>Brushed colleges</h2>
-        <p id="table-note" class="hint"></p>
-      </div>
-      <p id="table-empty" class="empty"></p>
-      <div class="table-scroll">
-        <table id="brush-table" style="display:none">
-          <thead>
-            <tr><th>College</th><th class="num">Net price</th><th class="num">Median debt</th><th class="num">Completion</th><th class="num">Earnings (5 yr)</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
   </main>
+
+  <!-- Details on demand: colleges inside the current brush -->
+  <section class="panel table-card">
+    <div class="panel-head">
+      <div>
+        <h2>Brushed colleges</h2>
+        <p id="table-note" class="panel-sub"></p>
+      </div>
+    </div>
+    <p id="table-empty" class="empty"></p>
+    <div class="table-scroll">
+      <table id="brush-table" style="display:none">
+        <thead>
+          <tr><th>College</th><th class="num">Net price</th><th class="num">Median debt</th><th class="num">Completion</th><th class="num">Earnings (5 yr)</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
 
   <footer id="footnote" class="footnote"></footer>
 

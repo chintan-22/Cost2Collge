@@ -16,8 +16,8 @@
 import { METRICS, SECTORS } from "./config.js";
 import { state, on, isVisible, setBrushed, setHovered, togglePin, setActivePair } from "./state.js";
 
-const GAP = 12;
-const PAD = { top: 6, right: 6, bottom: 44, left: 58 };
+const GAP = 8;
+const PAD = { top: 6, right: 6, bottom: 44, left: 52 };
 const R = 2.2; // dot radius
 const HIT_RADIUS = 7; // pointer pick radius (bigger than the dot)
 const N = METRICS.length;
@@ -47,7 +47,7 @@ export function createSplom(container, data, scales, { tooltip, onMessage } = {}
     const width = container.clientWidth;
     const prevSize = size;
     size = Math.floor((width - PAD.left - PAD.right - GAP * (N - 1)) / N);
-    size = Math.max(110, Math.min(220, size));
+    size = Math.max(80, Math.min(200, size));
     totalW = PAD.left + PAD.right + size * N + GAP * (N - 1);
     totalH = PAD.top + PAD.bottom + size * N + GAP * (N - 1);
 
@@ -116,6 +116,11 @@ export function createSplom(container, data, scales, { tooltip, onMessage } = {}
       .attr("width", size + 6).attr("height", size + 6);
   }
 
+  // fewer ticks in small cells so axis labels don't run together
+  function nTicks() {
+    return size < 140 ? 3 : 4;
+  }
+
   function drawFrame() {
     const frame = svg.append("g").attr("class", "frame");
 
@@ -126,9 +131,9 @@ export function createSplom(container, data, scales, { tooltip, onMessage } = {}
     cg.append("rect").attr("class", "cell-bg").attr("width", size).attr("height", size);
     cg.filter((c) => !c.diag).each(function (c) {
       const g = d3.select(this);
-      g.selectAll("line.gx").data(xs[c.col].ticks(4)).join("line").attr("class", "grid")
+      g.selectAll("line.gx").data(xs[c.col].ticks(nTicks())).join("line").attr("class", "grid")
         .attr("x1", (t) => xs[c.col](t)).attr("x2", (t) => xs[c.col](t)).attr("y1", 0).attr("y2", size);
-      g.selectAll("line.gy").data(ys[c.row].ticks(4)).join("line").attr("class", "grid")
+      g.selectAll("line.gy").data(ys[c.row].ticks(nTicks())).join("line").attr("class", "grid")
         .attr("y1", (t) => ys[c.row](t)).attr("y2", (t) => ys[c.row](t)).attr("x1", 0).attr("x2", size);
     });
 
@@ -144,13 +149,13 @@ export function createSplom(container, data, scales, { tooltip, onMessage } = {}
       const x = PAD.left + i * (size + GAP);
       frame.append("g").attr("class", "axis")
         .attr("transform", `translate(${x},${bottom + 4})`)
-        .call(d3.axisBottom(xs[i]).ticks(4).tickFormat(m.tick).tickSizeOuter(0));
+        .call(d3.axisBottom(xs[i]).ticks(nTicks()).tickFormat(m.tick).tickSizeOuter(0));
       frame.append("text").attr("class", "axis-title")
         .attr("x", x + size / 2).attr("y", bottom + 38).attr("text-anchor", "middle")
         .text(m.label);
       frame.append("g").attr("class", "axis")
         .attr("transform", `translate(${PAD.left - 4},${PAD.top + i * (size + GAP)})`)
-        .call(d3.axisLeft(ys[i]).ticks(4).tickFormat(m.tick).tickSizeOuter(0));
+        .call(d3.axisLeft(ys[i]).ticks(nTicks()).tickFormat(m.tick).tickSizeOuter(0));
     });
   }
 

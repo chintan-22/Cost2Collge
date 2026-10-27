@@ -2,12 +2,13 @@
 // Views never talk to each other directly: they update state through the
 // setters below and redraw when the matching event fires.
 
-import { SECTORS, MAX_PINNED } from "./config.js";
+import { SECTORS, MAX_PINNED, SIZE_BUCKETS } from "./config.js";
 
 export const state = {
   filters: {
     sectors: new Set(SECTORS.map((s) => s.key)),
     state: "All",
+    size: "All", // "All" or a SIZE_BUCKETS key
   },
   brushed: null, // Set<UNITID> of colleges inside the current brush, or null
   brushSource: null, // which view owns the current brush
@@ -30,7 +31,13 @@ function emit(event) {
 
 export function isVisible(d) {
   const f = state.filters;
-  return f.sectors.has(d.sector) && (f.state === "All" || d.state === f.state);
+  if (!f.sectors.has(d.sector)) return false;
+  if (f.state !== "All" && d.state !== f.state) return false;
+  if (f.size !== "All") {
+    const bucket = SIZE_BUCKETS.find((b) => b.key === f.size);
+    if (d.enrollment == null || !bucket.test(d.enrollment)) return false;
+  }
+  return true;
 }
 
 export function setFilters(partial) {

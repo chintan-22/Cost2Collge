@@ -67,6 +67,13 @@ export const SECTORS = [
   { key: "Private for-profit", label: "Private for-profit", cssVar: "--sector-forprofit" },
 ];
 
+// Institution size filter (undergraduate enrollment, UGDS)
+export const SIZE_BUCKETS = [
+  { key: "small", label: "Small (under 5,000)", test: (n) => n < 5000 },
+  { key: "medium", label: "Medium (5,000–15,000)", test: (n) => n >= 5000 && n < 15000 },
+  { key: "large", label: "Large (15,000+)", test: (n) => n >= 15000 },
+];
+
 /**
  * Builds one shared scale per metric (range is set by each view).
  * A few extreme values (e.g. one net price of ~$289k) would squash every

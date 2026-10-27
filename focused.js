@@ -197,7 +197,9 @@ export function createFocused(container, data, scales, { tooltip, onMessage, onF
         g.append("text").attr("class", "pin-label f-pin-label").attr("dy", "0.32em");
         return g;
       });
+    const offs = labelOffsets(rows.map((d) => ({ key: d.UNITID, y: y(d[ky]) })));
     pins.select("text")
+      .attr("y", (d) => offs.get(d.UNITID) || 0)
       .attr("x", (d) => (labelSide(x(d[kx])) === "left" ? -11 : 11))
       .attr("text-anchor", (d) => (labelSide(x(d[kx])) === "left" ? "end" : "start"))
       .text((d) => `${state.pinned.indexOf(d.UNITID) + 1}  ${shorten(d.name)}`);
@@ -334,4 +336,20 @@ export function createFocused(container, data, scales, { tooltip, onMessage, onF
 
 function shorten(name, max = 34) {
   return name.length > max ? `${name.slice(0, max - 1)}…` : name;
+}
+
+/**
+ * Vertical offsets that keep pin labels from printing on top of each other:
+ * labels are sorted by screen y and pushed down until they are `gap` px apart.
+ * Returns Map(key → offset in px from the dot).
+ */
+function labelOffsets(items, gap = 15) {
+  const out = new Map();
+  let last = -Infinity;
+  for (const it of [...items].sort((a, b) => a.y - b.y)) {
+    const want = Math.max(it.y, last + gap);
+    out.set(it.key, want - it.y);
+    last = want;
+  }
+  return out;
 }

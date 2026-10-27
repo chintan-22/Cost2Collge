@@ -240,7 +240,9 @@ export function createFields(container, programs, scales, ui, { tooltip, onMessa
       e.append("text").attr("class", "pin-label f-pin-label").attr("dy", "0.32em");
       return e;
     });
+    const offs = labelOffsets(marks.map((m) => ({ key: m.key, y: y(m.p.earnings) })));
     g.select("text")
+      .attr("y", (m) => offs.get(m.key) || 0)
       .attr("x", (m) => (side(x(m.p.debt)) === "left" ? -12 : 12))
       .attr("text-anchor", (m) => (side(x(m.p.debt)) === "left" ? "end" : "start"))
       .text((m) => m.label);
@@ -413,4 +415,20 @@ export function buildProgramScales(programs, instRows) {
     debt: d3.scaleLinear().domain([0, debtMax]).nice().clamp(true),
     earnings: d3.scaleLinear().domain([earnMin, earnMax]).nice().clamp(true),
   };
+}
+
+/**
+ * Vertical offsets that keep pin labels from printing on top of each other:
+ * labels are sorted by screen y and pushed down until they are `gap` px apart.
+ * Returns Map(key → offset in px from the dot).
+ */
+function labelOffsets(items, gap = 15) {
+  const out = new Map();
+  let last = -Infinity;
+  for (const it of [...items].sort((a, b) => a.y - b.y)) {
+    const want = Math.max(it.y, last + gap);
+    out.set(it.key, want - it.y);
+    last = want;
+  }
+  return out;
 }
