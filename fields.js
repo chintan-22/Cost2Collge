@@ -71,7 +71,7 @@ export function createFields(container, programs, scales, ui, { tooltip, onMessa
 
   // ---------------------------------------------------------------- controls
   const modeButtons = d3.select(ui.mode).selectAll("button")
-    .data([{ key: "across", label: "One major across colleges" }, { key: "within", label: "All majors at one college" }])
+    .data([{ key: "across", label: "One major, many colleges" }, { key: "within", label: "All majors at one college" }])
     .join("button").attr("type", "button").attr("class", "seg").text((d) => d.label)
     .on("click", (e, d) => setMode(d.key));
 
@@ -201,7 +201,7 @@ export function createFields(container, programs, scales, ui, { tooltip, onMessa
     const me = shown.length ? d3.median(shown, (p) => p.earnings) : null;
     const lines = md == null ? [] : [
       { x1: x(md), x2: x(md), y1: 0, y2: height, label: `Field median debt ${usd(md)}`, lx: x(md) + 4, ly: 12, anchor: "start" },
-      { x1: 0, x2: width, y1: y(me), y2: y(me), label: `Field median earnings ${usd(me)}`, lx: width - 4, ly: y(me) - 6, anchor: "end" },
+      { x1: 0, x2: width, y1: y(me), y2: y(me), label: `Field median earnings ${usd(me)}`, lx: 4, ly: y(me) - 6, anchor: "start" },
     ];
     gMedian.selectAll("line").data(lines).join("line").attr("class", "fs-median-line")
       .attr("x1", (d) => d.x1).attr("x2", (d) => d.x2).attr("y1", (d) => d.y1).attr("y2", (d) => d.y2);
@@ -303,7 +303,7 @@ export function createFields(container, programs, scales, ui, { tooltip, onMessa
     if (mode === "within") {
       const inst = instById.get(withinCollege);
       el.html(inst
-        ? `<b>${rows.length}</b> bachelor's programs at ${inst.name} report both debt and earnings. Click a dot to see that major across all colleges.`
+        ? `<b>${rows.length}</b> majors at ${inst.name} have data. Click a dot to see that major at every college.`
         : "");
       return;
     }
@@ -311,9 +311,8 @@ export function createFields(container, programs, scales, ui, { tooltip, onMessa
     const missing = state.pinned
       .filter((id) => instById.has(id) && !rows.some((p) => p.UNITID === id))
       .map((id) => `${state.pinned.indexOf(id) + 1}. ${instById.get(id).name}`);
-    el.html(`<b>${shown.toLocaleString()}</b> colleges matching the filters report debt and earnings for <b>${fieldName.get(state.selectedField)}</b>.` +
-      (missing.length ? ` Not reported for this major (not offered, or suppressed for privacy): ${missing.join(", ")}.` : "") +
-      (showInstitution && state.pinned.length ? " Squares show each pinned college's institution-wide position; arrows point to the program." : ""));
+    el.html(`<b>${shown.toLocaleString()}</b> colleges have data for <b>${fieldName.get(state.selectedField)}</b>.` +
+      (missing.length ? ` No data for this major at: ${missing.join(", ")} (not offered, or too few students to report).` : ""));
   }
 
   // ------------------------------------------------------------- hover/click
@@ -395,6 +394,12 @@ export function createFields(container, programs, scales, ui, { tooltip, onMessa
   fillFieldSelect();
   fillCollegeSelect();
   resize();
+
+  // used by the guided example (story.js)
+  return {
+    setMode,
+    findField: (text) => allFields.find((c) => fieldName.get(c).startsWith(text)) || null,
+  };
 }
 
 function shorten(name, max = 34) {
