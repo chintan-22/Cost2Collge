@@ -55,9 +55,9 @@ export const METRIC_BY_KEY = Object.fromEntries(METRICS.map((m) => [m.key, m]));
 
 // Viz 2 presets: [x metric, y metric]
 export const PAIR_PRESETS = [
-  { label: "Net price × Earnings", pair: ["net_price", "median_earnings_5yr"] },
-  { label: "Debt × Earnings", pair: ["median_debt", "median_earnings_5yr"] },
-  { label: "Net price × Completion", pair: ["net_price", "completion_rate"] },
+  { label: "Cost vs. pay", pair: ["net_price", "median_earnings_5yr"] },
+  { label: "Debt vs. pay", pair: ["median_debt", "median_earnings_5yr"] },
+  { label: "Cost vs. graduation", pair: ["net_price", "completion_rate"] },
 ];
 
 // Sector colors live in style.css (light + dark), referenced here by CSS variable.

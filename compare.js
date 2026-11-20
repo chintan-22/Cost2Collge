@@ -12,7 +12,7 @@
 import { METRICS } from "./config.js";
 import { state, on, isVisible, setHovered } from "./state.js";
 
-const LABEL_W = 150;
+let LABEL_W = 150; // narrower on phones (set in render)
 const RIGHT = 24;
 const ROW_H = 74;
 const TOP = 14;
@@ -24,6 +24,16 @@ const LANE_STEP = 2 * DOT_R - 3;
 export function createCompare(container, data, scales, { tooltip } = {}) {
   const byId = new Map(data.map((d) => [d.UNITID, d]));
   const root = d3.select(container);
+  // shown when nothing is pinned yet
+  const emptyState = root.append("div").attr("class", "c-empty").html(`
+    <svg class="c-empty-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 2a6 6 0 0 0-6 6c0 4.5 6 12 6 12s6-7.5 6-12a6 6 0 0 0-6-6zm0 8.2A2.2 2.2 0 1 1 12 5.8a2.2 2.2 0 0 1 0 4.4z"/>
+    </svg>
+    <p class="c-empty-title">No colleges pinned yet</p>
+    <p class="c-empty-text">Click any dot in plot 1 or 2 to pin up to 4 colleges. They'll line up here, side by side.</p>
+    <button type="button" class="c-empty-btn">Show me an example</button>`);
+  emptyState.select(".c-empty-btn").on("click", () => document.getElementById("example-btn")?.click());
+  // shown when only one college is pinned
   const empty = root.append("p").attr("class", "empty");
   const svg = root.append("svg").attr("class", "compare-svg").attr("role", "img")
     .attr("aria-label", "Aligned dot plot comparing pinned colleges on four metrics");
@@ -34,16 +44,16 @@ export function createCompare(container, data, scales, { tooltip } = {}) {
     const pinned = state.pinned.map((id) => byId.get(id)).filter(Boolean);
     const visible = data.filter(isVisible);
 
-    empty.style("display", pinned.length >= 2 ? "none" : null)
-      .text(pinned.length === 0
-        ? "Pin 2–4 colleges (click a dot in either scatterplot, or a table row) to compare them here."
-        : "Pin at least one more college to compare.");
+    emptyState.style("display", pinned.length === 0 ? null : "none");
+    empty.style("display", pinned.length === 1 ? null : "none")
+      .text("Pin at least one more college to compare.");
     svg.style("display", pinned.length ? null : "none");
     legend.style("display", pinned.length ? null : "none");
     tableWrap.style("display", pinned.length ? null : "none");
     if (!pinned.length) return;
 
-    const width = Math.max(420, container.clientWidth);
+    const width = Math.max(280, container.clientWidth);
+    LABEL_W = width < 520 ? 104 : 150;
     const plotW = width - LABEL_W - RIGHT;
     const height = TOP + METRICS.length * ROW_H;
     svg.attr("width", width).attr("height", height);
@@ -83,7 +93,7 @@ export function createCompare(container, data, scales, { tooltip } = {}) {
       .attr("x1", (r) => r.x(r.med)).attr("x2", (r) => r.x(r.med)).attr("y1", -12).attr("y2", 12);
     g.select(".c-axis").attr("transform", "translate(0,26)")
       .each(function (r) {
-        d3.select(this).call(d3.axisBottom(r.x).ticks(6).tickFormat(r.m.tick).tickSizeOuter(0));
+        d3.select(this).call(d3.axisBottom(r.x).ticks(plotW < 320 ? 4 : 6).tickFormat(r.m.tick).tickSizeOuter(0));
       });
 
     // dots: stack colleges with nearly equal values into lanes so none hide

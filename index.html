@@ -8,7 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
 </head>
 <body>
-  <!-- Header bar: title + shared filters -->
+  <!-- Header bar: title, filters, help -->
   <header class="app-header">
     <div class="brand">
       <svg class="brand-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -16,20 +16,27 @@
         <rect x="10" y="7" width="4" height="14" rx="1"></rect>
         <rect x="17" y="3" width="4" height="18" rx="1"></rect>
       </svg>
-      <div>
-        <h1>College Cost, Debt &amp; Outcomes</h1>
-        <p class="brand-sub">Coordinated views of U.S. four-year colleges · College Scorecard</p>
-      </div>
+      <h1>College Cost, Debt &amp; Outcomes</h1>
     </div>
 
     <div class="header-filters" aria-label="Filters">
       <label class="hf"><span class="hf-label">State</span><select id="state-filter"></select></label>
-      <label class="hf"><span class="hf-label">Sector</span><select id="sector-filter"></select></label>
-      <label class="hf"><span class="hf-label">Institution size</span><select id="size-filter"></select></label>
-      <label class="hf hf-wide"><span class="hf-label">Field of study (view 4)</span><select id="field-select"></select></label>
-      <button id="reset" type="button" class="hf-btn">Reset</button>
+      <label class="hf"><span class="hf-label">Type of college</span><select id="sector-filter"></select></label>
+      <label class="hf"><span class="hf-label">Size</span><select id="size-filter"></select></label>
+      <label class="hf hf-wide"><span class="hf-label">Major</span><select id="field-select"></select></label>
+      <div class="hf-actions">
+        <button id="tour-btn" type="button" class="hf-btn">How to use</button>
+        <button id="example-btn" type="button" class="hf-btn hf-btn-accent">Try an example</button>
+        <button id="reset" type="button" class="hf-btn">Reset</button>
+      </div>
     </div>
   </header>
+
+  <!-- Hero: the hook -->
+  <section class="hero">
+    <p class="hero-hook">Picking a college? Look past the price tag.</p>
+    <p class="hero-sub">See what students pay, borrow and earn at U.S. colleges, compare your favorites side by side, and check your major.</p>
+  </section>
 
   <!-- Status + pinned colleges -->
   <div class="subbar">
@@ -37,82 +44,122 @@
     <div class="pinned-bar">
       <span class="pb-label">Pinned <span id="pinned-count" class="count"></span></span>
       <ol id="pinned-list" class="pinned-list"></ol>
-      <span id="pinned-empty" class="empty">Click any dot or table row to pin up to 4 colleges.</span>
+      <span id="pinned-empty" class="empty">Click any dot to pin up to 4 colleges.</span>
     </div>
   </div>
 
-  <!-- Four coordinated views, 2 × 2 -->
+  <!-- Four linked plots, 2 × 2 -->
   <main class="grid4">
-    <!-- 1. Scatterplot Matrix -->
-    <section class="panel viz-card">
+    <!-- 1. Scatterplot matrix -->
+    <section class="panel viz-card" id="panel-1">
       <div class="panel-head">
         <span class="panel-badge">1</span>
         <div>
-          <h2>Scatterplot Matrix</h2>
-          <p class="panel-sub">Net price · debt · completion · earnings (4 × 4) · DR1</p>
+          <h2>The big picture</h2>
+          <p class="panel-sub">How cost, debt, graduation and pay relate across colleges</p>
         </div>
       </div>
+      <details class="howto">
+        <summary>How to read this</summary>
+        <ul>
+          <li><b>Each dot is one college</b>, colored by type of college.</li>
+          <li><b>Each small box compares two things.</b> The name under the column says what goes across; the name at the start of the row says what goes up.</li>
+          <li><b>Dots rising from left to right</b> mean the two things go up together. A shapeless cloud means they aren't related.</li>
+          <li><b>The grey boxes on the diagonal</b> show how many colleges have each value. Taller bars mean more colleges.</li>
+          <li><b>Try it:</b> drag a box to highlight those colleges everywhere, click a dot to pin it, or double-click a box to open it bigger in plot 2.</li>
+        </ul>
+      </details>
       <div class="p1-body">
         <div id="splom"></div>
         <aside id="splom-legend" class="splom-legend"></aside>
       </div>
     </section>
 
-    <!-- 2. Focused Scatterplot + Pareto Frontier -->
-    <section class="panel focus-card">
+    <!-- 2. Focused scatterplot + best-deals line -->
+    <section class="panel focus-card" id="panel-2">
       <div class="panel-head">
         <span class="panel-badge">2</span>
         <div>
-          <h2>Focused Scatterplot + Pareto Frontier</h2>
-          <p class="panel-sub">One metric pair · non-dominated colleges on the step line · DR2</p>
+          <h2>Zoom in on one trade-off</h2>
+          <p class="panel-sub">Pick two things to compare and find the best deals</p>
         </div>
       </div>
+      <details class="howto">
+        <summary>How to read this</summary>
+        <ul>
+          <li><b>Each dot is one college</b>, placed by the two things you pick with the buttons below.</li>
+          <li><b>The "preferred corner" label</b> shows where most students want to be, for example low cost and high pay.</li>
+          <li><b>Turn on "Show best deals"</b> to draw a line through the colleges that no other college beats on both things at once.</li>
+          <li><b>It is not a ranking.</b> A college below the line can still be the right choice once you think about other things.</li>
+          <li><b>Try it:</b> click a dot to pin a college, or drag a box to select a group.</li>
+        </ul>
+      </details>
       <div class="focus-controls">
-        <div id="pair-presets" class="segmented" role="group" aria-label="Metric pair presets"></div>
-        <label class="control-group"><span class="control-label">X</span><select id="x-select"></select></label>
-        <label class="control-group"><span class="control-label">Y</span><select id="y-select"></select></label>
-        <label class="toggle"><input type="checkbox" id="pareto-toggle"> Pareto frontier</label>
+        <div id="pair-presets" class="segmented" role="group" aria-label="What to compare"></div>
+        <label class="control-group"><span class="control-label">Across</span><select id="x-select"></select></label>
+        <label class="control-group"><span class="control-label">Up</span><select id="y-select"></select></label>
+        <label class="toggle"><input type="checkbox" id="pareto-toggle"> Show best deals</label>
       </div>
       <div id="focused"></div>
       <p id="frontier-note" class="hint frontier-note"></p>
     </section>
 
-    <!-- 3. Aligned Dot Plot + Distribution Context -->
-    <section class="panel compare-card">
+    <!-- 3. Aligned comparison of pinned colleges -->
+    <section class="panel compare-card" id="panel-3">
       <div class="panel-head">
         <span class="panel-badge">3</span>
         <div>
-          <h2>Aligned Dot Plot + Distribution Context</h2>
-          <p class="panel-sub">One row per metric · pinned colleges vs. filtered colleges · DR3</p>
+          <h2>Compare your shortlist</h2>
+          <p class="panel-sub">Your pinned colleges side by side, against typical colleges</p>
         </div>
       </div>
+      <details class="howto">
+        <summary>How to read this</summary>
+        <ul>
+          <li><b>Each row is one question:</b> cost, debt, graduation rate and pay, each on its own scale.</li>
+          <li><b>The numbered dots</b> are your pinned colleges, with the same numbers as everywhere else.</li>
+          <li><b>The grey bar</b> covers the middle half of colleges that match your filters, and the dashed line is the typical college.</li>
+          <li><b>A dot outside the grey bar</b> is unusually high or low on that question. Each row says whether lower or higher is better.</li>
+          <li><b>Exact numbers</b> are in the table underneath.</li>
+        </ul>
+      </details>
       <div id="compare"></div>
     </section>
 
-    <!-- 4. Field-of-Study Scatterplot -->
-    <section class="panel fields-card">
+    <!-- 4. Field of study -->
+    <section class="panel fields-card" id="panel-4">
       <div class="panel-head">
         <span class="panel-badge">4</span>
         <div>
-          <h2>Field-of-Study Scatterplot</h2>
-          <p class="panel-sub">Program debt × program earnings · same grammar, two modes · DR4</p>
+          <h2>Check your major</h2>
+          <p class="panel-sub">Student debt and pay for one major, college by college</p>
         </div>
       </div>
+      <details class="howto">
+        <summary>How to read this</summary>
+        <ul>
+          <li><b>Pick a major</b> in the "Major" filter at the top. Each dot is that major at one college.</li>
+          <li><b>Further left</b> means students borrow less; <b>higher up</b> means graduates earn more.</li>
+          <li><b>The dashed lines</b> show the typical debt and pay for this major.</li>
+          <li><b>For pinned colleges</b>, the square is the college overall and the arrow points to this major. An arrow pointing up means this major pays more than the college's average.</li>
+          <li><b>"All majors at one college"</b> shows every major at one of your pinned colleges instead.</li>
+        </ul>
+      </details>
       <div class="focus-controls">
-        <div id="field-mode" class="segmented" role="group" aria-label="Field view mode"></div>
+        <div id="field-mode" class="segmented" role="group" aria-label="What to show"></div>
         <label id="college-select-wrap" class="control-group"><span class="control-label">College</span><select id="college-select"></select></label>
-        <label class="toggle"><input type="checkbox" id="inst-toggle" checked> Institution-wide position</label>
+        <label class="toggle"><input type="checkbox" id="inst-toggle" checked> Show college overall</label>
       </div>
       <div id="fields"></div>
       <p id="fields-note" class="hint frontier-note"></p>
     </section>
   </main>
 
-  <!-- Details on demand: colleges inside the current brush -->
-  <section class="panel table-card">
+  <!-- Colleges inside the current selection -->
+  <section class="panel table-card" id="panel-table">
     <div class="panel-head">
       <div>
-        <h2>Brushed colleges</h2>
+        <h2>Selected colleges</h2>
         <p id="table-note" class="panel-sub"></p>
       </div>
     </div>
@@ -127,7 +174,9 @@
     </div>
   </section>
 
-  <footer id="footnote" class="footnote"></footer>
+  <footer class="footnote">
+    Data: U.S. Department of Education, College Scorecard. Typical values for past students; your own cost and pay may differ.
+  </footer>
 
   <div id="tooltip" class="tooltip" role="tooltip"></div>
   <div id="message" class="message" role="status"></div>

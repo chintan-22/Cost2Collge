@@ -1,9 +1,13 @@
 # Cost2College — College Cost, Debt & Outcomes
 
-This repository contains the **College Cost, Debt & Outcomes** visualization prototype:
+**Picking a college? Look past the price tag.** An interactive website that shows what students pay, borrow and earn at U.S. colleges, lets you compare your favorites side by side, and checks how your major pays.
+
+**Live site:** _coming soon_ <!-- replace with the deployed link -->
+
+This repository contains:
 
 - a data-cleaning pipeline that converts the large raw U.S. Department of Education College Scorecard files into smaller, visualization-ready CSV files, and
-- a D3.js web app with four linked visualizations built on those files.
+- a D3.js website with four linked plots built on those files.
 
 ## Run the prototype
 
@@ -58,40 +62,48 @@ Browsers block web pages opened directly from disk (`file://...`) from loading t
 
 All views share the same filters and selections, so an action in one view updates the others.
 
-| View | What it shows | Interactions |
-| --- | --- | --- |
-| **1. Scatterplot matrix** | 4×4 matrix of net price, median debt, completion rate and 5-year earnings; one dot per college, colored by sector; histograms on the diagonal | Hover for details · drag to brush · click a dot to pin · double-click a cell to open it in view 2 |
-| **2. Focused trade-off** | One large scatterplot for a chosen metric pair (presets: Net price × Earnings, Debt × Earnings, Net price × Completion) | Presets or X/Y dropdowns · drag to brush · click to pin · optional trade-off (Pareto) frontier |
-| **3. Pinned college comparison** | Up to 4 pinned colleges on one aligned scale per metric, with the middle 50% and median of colleges matching the filters as a peer reference; exact values in a table | Hover a dot for details and its percentile |
-| **4. Field of study** | Program median debt vs. program median earnings for one major across colleges, or for every major at one pinned college | Choose a major or college · click to pin · arrows show how a pinned college's program compares with its institution-wide position |
+| Plot | Chart type | What it shows | Interactions |
+| --- | --- | --- | --- |
+| **1. The big picture** | Scatterplot matrix | Net price, median debt, completion rate and 5-year earnings for every college, each pair in its own box; one dot per college, colored by type; histograms on the diagonal | Hover for details · drag to select · click a dot to pin · double-click a box to open it in plot 2 |
+| **2. Zoom in on one trade-off** | Focused scatterplot | One large plot for two chosen measures (Cost vs. pay, Debt vs. pay, Cost vs. graduation, or any pair) | Pair buttons or Across/Up dropdowns · drag to select · click to pin · "Show best deals" draws the Pareto frontier |
+| **3. Compare your shortlist** | Aligned dot plot | Up to 4 pinned colleges, one row per measure, against the middle 50% and median of colleges matching the filters; exact values in a table | Hover a dot for details and its percentile |
+| **4. Check your major** | Field-of-study scatterplot | Program debt vs. program pay for one major across colleges, or for every major at one pinned college | Pick a major or college · click to pin · arrows show how a pinned college's major compares with the college overall |
 
-Shared controls at the top: **sector** buttons (also the color legend), **state** dropdown and **Reset**. The **Pinned colleges** panel lists pinned colleges (click × to unpin), and the **Brushed colleges** table lists colleges inside the current brush (click a row to pin).
+Shared controls in the header: **State**, **Type of college**, **Size** and **Major** dropdowns, plus **Reset**. Pinned colleges appear as chips under the header (click × to unpin), and the **Selected colleges** table lists colleges inside the current brush (click a row to pin).
 
-Suggested demo workflow: filter → inspect a relationship in the matrix → brush and pin 2–4 colleges → compare them in view 3 → choose a major in view 4.
+### Help for first-time users
+
+- **How to use**: a 4-step guided tour of the page. It opens by itself on a visitor's first visit (remembered in the browser) and can be reopened from the header.
+- **How to read this**: a collapsible, plain-language guide on every plot.
+- **Try an example**: a step-by-step walkthrough with real data. A Texas student who wants a big university and plans to study mechanical engineering goes from 1,911 colleges to a shortlist. Each step sets the filters, pins and major automatically. The numbers in its text were checked against the data files; re-check them in `story.js` if the data is updated.
+
+Suggested workflow: filter → spot a pattern in plot 1 → find the best deals in plot 2 → pin 2–4 colleges → compare them in plot 3 → pick a major in plot 4.
 
 ## Project structure
 
 ```text
 Cost2Collge/
 ├── index.html                          # page layout
-├── style.css                           # styling (light and dark mode)
+├── style.css                           # styling
 ├── main.js                             # loads data, builds controls, connects the views
 ├── config.js                           # metrics, sector colors, shared axis scales
 ├── state.js                            # shared state: filters, brush, pinned colleges, metric pair, field
-├── splom.js                            # Visualization 1 — scatterplot matrix
-├── focused.js                          # Visualization 2 — focused trade-off scatterplot
-├── compare.js                          # Visualization 3 — aligned pinned-college comparison
-├── fields.js                           # Visualization 4 — field-of-study scatterplot
+├── splom.js                            # Plot 1 — the big picture (scatterplot matrix)
+├── focused.js                          # Plot 2 — zoom in on one trade-off
+├── compare.js                          # Plot 3 — compare your shortlist
+├── fields.js                           # Plot 4 — check your major
+├── tour.js                             # first-visit guided tour ("How to use")
+├── story.js                            # interactive example walkthrough ("Try an example")
 ├── serve.py                            # local no-cache web server
 ├── clean_college_scorecard.py          # data-cleaning script
-├── institutions_clean.csv              # all cleaned institutions (used by view 4 for college details)
-├── institutions_visualizable.csv       # institutions with all four core metrics (views 1–3)
+├── institutions_clean.csv              # all cleaned institutions (used by plot 4 for college details)
+├── institutions_visualizable.csv       # institutions with all four core metrics (plots 1–3)
 ├── programs_bachelors_clean.csv
-├── programs_bachelors_visualizable.csv # bachelor's programs with debt and earnings (view 4)
+├── programs_bachelors_visualizable.csv # bachelor's programs with debt and earnings (plot 4)
 └── README.md
 ```
 
-Views never call each other directly. Each one updates the shared state in `state.js` and redraws when that state changes.
+The plots never call each other directly. Each one updates the shared state in `state.js` and redraws when that state changes.
 
 ---
 
@@ -326,9 +338,11 @@ are available.
 
 Use this for the field-of-study debt-vs-earnings visualization.
 
+> **Known issue:** the `sector` column in the program files currently reads `Other/Unknown` for every row, because the field-of-study file stores `CONTROL` as text rather than the numeric codes the script expects. The website is not affected: it takes each program's sector from the institution file through `UNITID`. To fix the CSVs, map the text values in `clean_college_scorecard.py` (or fall back to the institution's sector) and re-run the script.
+
 ## Which file to use for each visualization
 
-### Visualization 1 — Scatterplot Matrix
+### Plot 1 — The big picture (scatterplot matrix)
 
 Use:
 
@@ -345,7 +359,7 @@ Main metrics:
 
 Each point represents one institution.
 
-### Visualization 2 — Focused Trade-Off Scatterplot
+### Plot 2 — Zoom in on one trade-off (focused scatterplot)
 
 Use:
 
@@ -363,7 +377,7 @@ Net Price vs. Completion
 
 This view can also calculate the Pareto frontier for the selected pair of metrics.
 
-### Visualization 3 — Pinned College Comparison
+### Plot 3 — Compare your shortlist (aligned dot plot)
 
 Use:
 
@@ -380,7 +394,7 @@ Compare selected colleges using:
 
 Peer medians or distributions can also be calculated from this file.
 
-### Visualization 4 — Field-of-Study Drill-Down
+### Plot 4 — Check your major (field-of-study scatterplot)
 
 Use:
 
@@ -397,36 +411,9 @@ Main fields:
 
 Use `UNITID` to connect the selected college from the institution-level views to its program-level records.
 
-## Recommended D3 workflow
+## Scope
 
-Load both visualization-ready files:
-
-```javascript
-const institutions = await d3.csv("institutions_visualizable.csv");
-const programs = await d3.csv("programs_bachelors_visualizable.csv");
-```
-
-When a college is selected, use its `UNITID`:
-
-```javascript
-const selectedPrograms = programs.filter(
-  d => d.UNITID === selectedCollege.UNITID
-);
-```
-
-This retrieves the program rows belonging to the selected institution.
-
-## Current prototype scope
-
-The current prototype starts with:
-
-```text
-Bachelor's-level field-of-study data
-```
-
-This matches the current presentation scope.
-
-If the team later decides to add Master's or doctoral program-level analysis, update the `CREDLEV` filter in `clean_college_scorecard.py`.
+The field-of-study plot covers **bachelor's-level** majors only. Net price and earnings are institution-wide figures for undergraduates. To add master's or doctoral programs later, change the `CREDLEV` filter in `clean_college_scorecard.py` and re-run it.
 
 ## Git / GitHub notes
 
@@ -465,6 +452,8 @@ splom.js
 focused.js
 compare.js
 fields.js
+tour.js
+story.js
 serve.py
 ```
 

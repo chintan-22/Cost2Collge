@@ -1,11 +1,13 @@
 // main.js — loads the data, builds controls and wires the views together.
 
-import { DATA_FILES, METRICS, METRIC_BY_KEY, SECTORS, SIZE_BUCKETS, MAX_PINNED, PAIR_PRESETS, buildScales } from "./config.js";
-import { state, on, isVisible, setFilters, setHovered, togglePin, clearPins, setActivePair } from "./state.js";
+import { DATA_FILES, METRICS, SECTORS, SIZE_BUCKETS, MAX_PINNED, PAIR_PRESETS, buildScales } from "./config.js";
+import { state, on, isVisible, setFilters, setHovered, togglePin, clearPins, setActivePair, setBrushed } from "./state.js";
 import { createSplom } from "./splom.js";
 import { createFocused } from "./focused.js";
 import { createCompare } from "./compare.js";
 import { createFields, buildProgramScales } from "./fields.js";
+import { createTour } from "./tour.js";
+import { createStory } from "./story.js";
 
 const num = (v) => (v === "" || v == null ? null : +v);
 
@@ -77,7 +79,7 @@ function createTooltip(el) {
 
 // --------------------------------------------------------------- controls
 // Header dropdowns: State, Sector, Institution size (+ Field of study, owned by Viz 4)
-function buildControls(data, views) {
+function buildControls(data, resetAll) {
   const allSectors = () => new Set(SECTORS.map((s) => s.key));
 
   const states = Array.from(new Set(data.map((d) => d.state))).sort();
@@ -98,11 +100,14 @@ function buildControls(data, views) {
     .attr("value", (b) => b.key).text((b) => b.label);
   d3.select("#size-filter").on("change", (e) => setFilters({ size: e.target.value }));
 
-  d3.select("#reset").on("click", () => {
-    views.forEach((v) => v.clearBrush());
-    clearPins();
-    d3.selectAll("#state-filter, #sector-filter, #size-filter").property("value", "All");
-    setFilters({ sectors: allSectors(), state: "All", size: "All" });
+  d3.select("#reset").on("click", resetAll);
+
+  // keep the dropdowns in step when filters change from code (Reset, the example)
+  on("filters", () => {
+    const f = state.filters;
+    d3.select("#state-filter").property("value", f.state);
+    d3.select("#size-filter").property("value", f.size);
+    d3.select("#sector-filter").property("value", f.sectors.size === SECTORS.length ? "All" : [...f.sectors][0]);
   });
 }
 
@@ -111,22 +116,16 @@ function updateSplomLegend(data) {
   const visible = data.filter(isVisible);
   const counts = d3.rollup(visible, (v) => v.length, (d) => d.sector);
   d3.select("#splom-legend").html(`
-    <div class="legend-title">Sector</div>
+    <div class="legend-title">Type of college</div>
     <ul class="legend-list">
       ${SECTORS.map((s) => `
         <li class="${state.filters.sectors.has(s.key) ? "" : "off"}">
           <span class="swatch" style="background:var(${s.cssVar})"></span>${s.label}
           <span class="legend-count">${(counts.get(s.key) || 0).toLocaleString()}</span>
         </li>`).join("")}
-      <li><span class="swatch swatch-dim"></span>Outside brush</li>
+      <li><span class="swatch swatch-dim"></span>Not selected</li>
       <li><span class="swatch swatch-ring"></span>Pinned college</li>
-    </ul>
-    <div class="legend-help">
-      <p>Diagonal: histograms</p>
-      <p>Drag in any cell → highlights everywhere</p>
-      <p>Click a dot → pin</p>
-      <p>Double-click a cell → view 2</p>
-    </div>`);
+    </ul>`);
 }
 
 // ------------------------------------------- Viz 2 controls (metric pair)
@@ -170,12 +169,8 @@ function buildPairControls(focused) {
 function updateFrontierNote(frontier) {
   const note = d3.select("#frontier-note");
   if (!frontier) return note.text("");
-  const [kx, ky] = state.activePair;
-  const mx = METRIC_BY_KEY[kx], my = METRIC_BY_KEY[ky];
-  const dir = (m) => (m.better === "low" ? "lower" : "higher");
-  note.html(`<b>${frontier.length}</b> colleges are on the trade-off frontier: no other visible college has both ` +
-    `${dir(mx)} ${mx.label.toLowerCase()} and ${dir(my)} ${my.label.toLowerCase()}. ` +
-    `This shows trade-offs, not a ranking; colleges off the line may still fit a student better.`);
+  note.html(`<b>${frontier.length}</b> colleges are on the best-deals line: no other college shown beats them on both. ` +
+    `It shows trade-offs, not a ranking.`);
 }
 
 // ---------------------------------------------------------- status + panels
@@ -185,7 +180,7 @@ function updateStatus(data) {
   const brushedCount = br ? data.filter((d) => isVisible(d) && br.has(d.UNITID)).length : 0;
   d3.select("#status").html(
     `Showing <strong>${shown.toLocaleString()}</strong> of ${data.length.toLocaleString()} colleges` +
-    (br ? ` · <strong>${brushedCount.toLocaleString()}</strong> brushed` : ""));
+    (br ? ` · <strong>${brushedCount.toLocaleString()}</strong> selected` : ""));
 }
 
 /** Pinned bar under the header: one chip per pinned college (× unpins). */
@@ -216,12 +211,12 @@ function updateBrushTable(data) {
       .sort((a, b) => d3.descending(a.median_earnings_5yr, b.median_earnings_5yr))
     : [];
   d3.select("#table-empty").style("display", br ? "none" : null)
-    .text("Drag a rectangle in any scatterplot cell to list those colleges here.");
+    .text("Drag a box on plot 1 or 2 to list those colleges here.");
   d3.select("#brush-table").style("display", br ? null : "none");
   d3.select("#table-note").text(
     !br ? "" : rows.length > TABLE_LIMIT
-      ? `Top ${TABLE_LIMIT} of ${rows.length} by earnings. Click a row to pin.`
-      : `${rows.length} colleges, sorted by earnings. Click a row to pin.`);
+      ? `Top ${TABLE_LIMIT} of ${rows.length}, highest pay first. Click a row to pin it.`
+      : `${rows.length} colleges, highest pay first. Click a row to pin it.`);
 
   d3.select("#brush-table tbody").selectAll("tr").data(rows.slice(0, TABLE_LIMIT), (d) => d.UNITID).join("tr")
     .classed("is-pinned", (d) => state.pinned.includes(d.UNITID))
@@ -241,24 +236,12 @@ function flash(msg) {
   flashTimer = setTimeout(() => el.classed("visible", false), 2600);
 }
 
-function writeFootnote(clipped, total, programInfo) {
-  const notes = METRICS.map((m) => `<li><b>${m.label}:</b> ${m.note}</li>`).join("");
-  const clippedText = METRICS
-    .filter((m) => clipped[m.key].length)
-    .map((m) => `${clipped[m.key].length} college(s) with ${m.label.toLowerCase()} above the axis maximum ` +
-      `(${clipped[m.key].map((d) => `${d.name}: ${m.fmt(d[m.key])}`).join("; ")}) are drawn at the axis edge.`)
-    .join(" ");
-  d3.select("#footnote").html(`
-    <p>Source: U.S. Department of Education College Scorecard (most recent cohorts). ${total.toLocaleString()} institutions awarding a bachelor's degree or higher, with all four metrics reported. Missing and privacy-suppressed values are excluded, never treated as zero.</p>
-    <ul>${notes}</ul>
-    ${clippedText ? `<p>${clippedText}</p>` : ""}
-    ${programInfo ? `<p><b>Field of study:</b> ${programInfo.count.toLocaleString()} bachelor's programs reporting both median debt of borrowers (DEBT_ALL_STGP_ANY_MDN) and median earnings 5 years out (EARN_MDN_5YR). Program debt covers all borrowers in the program while institution debt covers graduates only, so compare the institution-wide squares with programs as an approximate reference.${programInfo.clipped ? ` ${programInfo.clipped} program(s) with values beyond the axis are drawn at the edge.` : ""}</p>` : ""}`);
-}
-
 // ------------------------------------------------------------------- init
 let programsPromise;
+let resolveFields;
+const fieldsReady = new Promise((r) => { resolveFields = r; });
 
-async function initFields(data, tooltip, total, clipped) {
+async function initFields(data, tooltip) {
   const card = d3.select("#fields");
   card.html('<p class="empty">Loading field-of-study data…</p>');
   let instAll, text;
@@ -274,10 +257,8 @@ async function initFields(data, tooltip, total, clipped) {
   const instById = new Map(instAll.map((d) => [d.UNITID, d]));
   const programs = d3.csvParse(text, parseProgram(instById));
   const scales = buildProgramScales(programs, data); // inst squares are drawn only for pinnable colleges
-  const [dMax, eMax] = [scales.debt.domain()[1], scales.earnings.domain()[1]];
-  const clippedPrograms = programs.filter((p) => p.debt > dMax || p.earnings > eMax).length;
 
-  createFields(document.getElementById("fields"), programs, scales, {
+  const fields = createFields(document.getElementById("fields"), programs, scales, {
     mode: "#field-mode",
     fieldSelect: "#field-select",
     fieldWrap: null, // the field dropdown lives in the header and is always shown
@@ -291,7 +272,7 @@ async function initFields(data, tooltip, total, clipped) {
     instById,
     pinnableIds: new Set(data.map((d) => d.UNITID)),
   });
-  writeFootnote(clipped, total, { count: programs.length, clipped: clippedPrograms });
+  resolveFields(fields);
 }
 
 async function init() {
@@ -311,7 +292,7 @@ async function init() {
   // defensive: only colleges with all four metrics can be placed in every cell
   const data = raw.filter((d) => METRICS.every((m) => Number.isFinite(d[m.key])));
   const byId = new Map(data.map((d) => [d.UNITID, d]));
-  const { scales, clipped } = buildScales(data);
+  const { scales } = buildScales(data);
 
   const tooltip = createTooltip(document.getElementById("tooltip"));
   const splom = createSplom(document.getElementById("splom"), data, scales, { tooltip, onMessage: flash });
@@ -322,9 +303,24 @@ async function init() {
 
   createCompare(document.getElementById("compare"), data, scales, { tooltip });
 
-  buildControls(data, [splom, focused]);
+  const DEFAULT_PAIR = ["net_price", "median_earnings_5yr"];
+  const setFrontier = (on) => {
+    d3.select("#pareto-toggle").property("checked", on);
+    focused.setShowFrontier(on);
+  };
+  // Reset: back to the starting view (used by the Reset button and the example)
+  const resetAll = () => {
+    splom.clearBrush();
+    focused.clearBrush();
+    setBrushed(null);
+    clearPins();
+    setFilters({ sectors: new Set(SECTORS.map((s) => s.key)), state: "All", size: "All" });
+    setActivePair(DEFAULT_PAIR);
+    setFrontier(false);
+  };
+
+  buildControls(data, resetAll);
   buildPairControls(focused);
-  writeFootnote(clipped, data.length);
 
   const refresh = () => { updateStatus(data); updateBrushTable(data); updateSplomLegend(data); };
   on("filters", refresh);
@@ -334,7 +330,12 @@ async function init() {
   refresh();
   updatePinnedPanel(byId);
 
-  initFields(data, tooltip, data.length, clipped);
+  initFields(data, tooltip);
+
+  // first-time help: guided tour + interactive example
+  const app = { data, resetAll, setFrontier, fieldsReady, flash };
+  const story = createStory(app);
+  createTour({ onTryExample: () => story.open() });
 }
 
 init();

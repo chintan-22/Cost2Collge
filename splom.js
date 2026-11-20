@@ -17,7 +17,7 @@ import { METRICS, SECTORS } from "./config.js";
 import { state, on, isVisible, setBrushed, setHovered, togglePin, setActivePair } from "./state.js";
 
 const GAP = 8;
-const PAD = { top: 6, right: 6, bottom: 44, left: 52 };
+const PAD = { top: 6, right: 6, bottom: 44, left: 70 };
 const R = 2.2; // dot radius
 const HIT_RADIUS = 7; // pointer pick radius (bigger than the dot)
 const N = METRICS.length;
@@ -47,7 +47,7 @@ export function createSplom(container, data, scales, { tooltip, onMessage } = {}
     const width = container.clientWidth;
     const prevSize = size;
     size = Math.floor((width - PAD.left - PAD.right - GAP * (N - 1)) / N);
-    size = Math.max(80, Math.min(200, size));
+    size = Math.max(64, Math.min(200, size));
     totalW = PAD.left + PAD.right + size * N + GAP * (N - 1);
     totalH = PAD.top + PAD.bottom + size * N + GAP * (N - 1);
 
@@ -156,6 +156,11 @@ export function createSplom(container, data, scales, { tooltip, onMessage } = {}
       frame.append("g").attr("class", "axis")
         .attr("transform", `translate(${PAD.left - 4},${PAD.top + i * (size + GAP)})`)
         .call(d3.axisLeft(ys[i]).ticks(nTicks()).tickFormat(m.tick).tickSizeOuter(0));
+      // row name on the left, matching the column names at the bottom
+      const yMid = PAD.top + i * (size + GAP) + size / 2;
+      frame.append("text").attr("class", "axis-title")
+        .attr("transform", `translate(12,${yMid}) rotate(-90)`).attr("text-anchor", "middle")
+        .text(m.label);
     });
   }
 
